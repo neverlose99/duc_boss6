@@ -100,3 +100,121 @@ const StudentsWithDays = students.map(s=>({
     daysStudying: differenceInDays(today, parseISO(s.joinedAt))
 }))
 console.table(StudentsWithDays)
+const form = document.querySelector('#todo-form')
+const input = document.querySelector('#todo-input')
+const list = document.querySelector('#todo-list')
+const count = document.querySelector('#remaining-count')
+const filterButtons = document.querySelectorAll('.filter-btn')
+
+let todos = JSON.parse(localStorage.getItem('todos') || '[]')
+let currentFilter = 'all'
+
+// Lưu dữ liệu
+function saveTodos() {
+  localStorage.setItem('todos', JSON.stringify(todos))
+}
+
+// Hiển thị danh sách
+function render() {
+  list.innerHTML = ''
+
+  const filteredTodos = todos.filter(todo => {
+    if (currentFilter === 'active') return !todo.done
+    if (currentFilter === 'completed') return todo.done
+    return true
+  })
+
+  for (const todo of filteredTodos) {
+    const li = document.createElement('li')
+    li.dataset.id = todo.id
+
+    const checkbox = document.createElement('input')
+    checkbox.type = 'checkbox'
+    checkbox.checked = todo.done
+    checkbox.dataset.action = 'toggle'
+
+    const span = document.createElement('span')
+    span.textContent = todo.text
+    span.className = 'todo-text'
+
+    if (todo.done) {
+      span.classList.add('done')
+    }
+
+    const deleteButton = document.createElement('button')
+    deleteButton.textContent = 'Xoa'
+    deleteButton.className = 'delete-btn'
+    deleteButton.dataset.action = 'delete'
+
+    li.append(checkbox, span, deleteButton)
+    list.append(li)
+  }
+
+  // Đếm công việc chưa hoàn thành
+  count.textContent = todos.filter(todo => !todo.done).length
+
+  // Đánh dấu nút lọc đang chọn
+  filterButtons.forEach(button => {
+    button.classList.toggle(
+      'active-filter',
+      button.dataset.filter === currentFilter
+    )
+  })
+}
+
+// Thêm công việc
+form.addEventListener('submit', event => {
+  event.preventDefault()
+
+  const text = input.value.trim()
+  if (!text) return
+
+  todos.push({
+    id: Date.now(),
+    text: text,
+    done: false
+  })
+
+  saveTodos()
+  render()
+  input.value = ''
+})
+
+// Đánh dấu hoàn thành
+list.addEventListener('change', event => {
+  if (event.target.dataset.action !== 'toggle') return
+
+  const id = Number(event.target.closest('li').dataset.id)
+
+  todos = todos.map(todo =>
+    todo.id === id
+      ? { ...todo, done: event.target.checked }
+      : todo
+  )
+
+  saveTodos()
+  render()
+})
+
+// Xóa công việc
+list.addEventListener('click', event => {
+  if (event.target.dataset.action !== 'delete') return
+
+  const id = Number(event.target.closest('li').dataset.id)
+
+  todos = todos.filter(todo => todo.id !== id)
+
+  saveTodos()
+  render()
+})
+
+// Lọc danh sách
+filterButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    currentFilter = button.dataset.filter
+    render()
+  })
+})
+
+// Hiển thị dữ liệu khi mở trang
+render()
